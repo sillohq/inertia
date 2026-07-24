@@ -14,7 +14,7 @@ authors = [
 ]
 keywords = ["sillo", "inertia", "react", "vite", "asgi"]
 dependencies = [
-    "sillo>=0.0.1",
+    "sillo>=0.0.1a1",
 ]
 
 [project.optional-dependencies]
