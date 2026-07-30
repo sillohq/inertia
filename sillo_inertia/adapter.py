@@ -12,7 +12,7 @@ from sillo.core.http import Request, Response
 
 from .config import InertiaConfig
 from .props import HtmlString, LazyProp
-from .vite import ViteReactOptions, render_vite_react_tags
+from .vite import ViteOptions, render_vite_tags
 
 JsonDict = dict[str, Any]
 Props = Mapping[str, Any] | Callable[
@@ -50,7 +50,7 @@ class Inertia:
     version: str | Callable[[], str | None] | None = None
     root_id: str = "app"
     base_dir: str | Path | None = None
-    vite: ViteReactOptions | None = None
+    vite: ViteOptions | None = None
     shared_props: dict[str, Any] = field(default_factory=dict)
     view_data: dict[str, Any] = field(default_factory=dict)
     config: InertiaConfig = field(init=False)
@@ -224,4 +224,4 @@ class Inertia:
     def _head_tags(self) -> str:
         if self.vite is None:
             return ""
-        return render_vite_react_tags(self.vite, Path(self.base_dir))
+        return render_vite_tags(self.vite, Path(self.base_dir))

@@ -1,0 +1,58 @@
+name: Release on Tag
+
+on:
+  push:
+    tags:
+      - 'inertia-v*'  # Inertia releases: inertia-v0.1.0
+
+jobs:
+  release:
+    name: Build and Publish to PyPI
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write       # for OIDC (trusted publishing)
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG="${{ github.ref_name }}"
+          VERSION="${TAG#inertia-v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Releasing Sillo Inertia v$VERSION"
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Clean Old Builds
+        run: |
+          cd inertia
+          rm -rf dist build *.egg-info
+
+      - name: Setup Virtual Environment
+        run: cd inertia && uv venv
+
+      - name: Install dependencies
+        run: cd inertia && uv pip install -e ".[dev]"
+
+      - name: Run tests
+        run: cd inertia && uv run pytest tests/ -q --tb=short
+
+      - name: Build the package
+        run: cd inertia && uv build
+
+      - name: Publish to PyPI
+        run: cd inertia && uv publish --token ${{ secrets.PYPI_TOKEN }}
