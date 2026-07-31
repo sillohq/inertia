@@ -17,7 +17,15 @@ repository = "https://github.com/sillohq/inertia"
 documentation = "https://sillolabs.com"
 keywords = ["sillo", "inertia", "react", "vue", "vite", "asgi", "spa"]
 dependencies = [
-    "sillo-framework>=0.0.1a1",
+    # [record] is not optional here: `import sillo` reaches sillo.users.base,
+    # which imports tortoise at module scope. A bare sillo-framework install
+    # makes `import sillo_inertia` fail with ModuleNotFoundError: 'tortoise'.
+    "sillo-framework[record]>=0.0.1a1",
+    # Workaround for an upstream gap: that same import chain ends at
+    # sillo/record/helpers.py doing `from aerich import Command`, but the
+    # [record] extra only declares tortoise-orm. Drop this line once
+    # sillo-framework ships aerich in [record].
+    "aerich>=0.7.0",
 ]
 
 [project.optional-dependencies]

@@ -32,27 +32,39 @@ jobs:
         with:
           python-version: '3.11'
 
+      # The install script has moved between ~/.cargo/bin and ~/.local/bin
+      # across uv versions. Add both so the PATH does not depend on which
+      # installer layout ships today.
       - name: Install uv
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Clean Old Builds
-        run: |
-          cd inertia
-          rm -rf dist build *.egg-info
+        run: rm -rf dist build *.egg-info
 
       - name: Setup Virtual Environment
-        run: cd inertia && uv venv
+        run: uv venv
 
       - name: Install dependencies
-        run: cd inertia && uv pip install -e ".[dev]"
+        run: uv pip install -e ".[dev]"
 
       - name: Run tests
-        run: cd inertia && uv run pytest tests/ -q --tb=short
+        run: uv run pytest tests/ -q --tb=short
 
       - name: Build the package
-        run: cd inertia && uv build
+        run: uv build
 
+      # Prefers OIDC trusted publishing (the id-token permission above); falls
+      # back to an API token when the PYPI_TOKEN secret is set. Passing an empty
+      # --token is a hard failure, so the secret must not be forwarded blindly.
       - name: Publish to PyPI
-        run: cd inertia && uv publish --token ${{ secrets.PYPI_TOKEN }}
+        env:
+          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+        run: |
+          if [ -n "$PYPI_TOKEN" ]; then
+            uv publish --token "$PYPI_TOKEN"
+          else
+            uv publish
+          fi
