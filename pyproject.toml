@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sillo-inertia"
-version = "0.1.0"
+version = "0.0.1a1s"
 description = "Inertia.js adapter for Sillo with React/Vue/Vite support."
 readme = "README.md"
 requires-python = ">=3.10"
