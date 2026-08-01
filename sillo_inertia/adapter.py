@@ -202,9 +202,13 @@ class Inertia:
         if not root_view.is_file():
             raise FileNotFoundError(f"Inertia root view not found: {root_view}")
 
-        encoded_page = html.escape(json.dumps(page, separators=(",", ":")), quote=True)
+        serialized = json.dumps(page, separators=(",", ":"))
         replacements = {
-            "inertia": encoded_page,
+            "inertia": self._page_script(serialized),
+            # The attribute form Inertia 1.x read from the root element. Kept
+            # for templates written against that convention; 2.x and later
+            # ignore it entirely.
+            "inertia_page": html.escape(serialized, quote=True),
             "root_id": html.escape(self.config.root_id, quote=True),
             "inertia_head": self._head_tags(),
             **{key: self._view_value(value) for key, value in self.view_data.items()},
@@ -215,6 +219,32 @@ class Inertia:
             content = content.replace("{{ " + key + " }}", value)
             content = content.replace("{{" + key + "}}", value)
         return content
+
+    def _page_script(self, serialized: str) -> str:
+        """Render the page object as the JSON script tag Inertia looks for.
+
+        Since Inertia 2.0 the client reads
+
+            document.querySelector('script[data-page="<id>"][type="application/json"]')
+
+        and returns null when it is absent — which surfaces in the browser as
+        ``Cannot read properties of null (reading 'component')`` from inside
+        ``createInertiaApp``. The 1.x convention of ``data-page`` on the root
+        ``<div>`` is no longer consulted at all.
+
+        The content of a ``<script>`` is raw text, not HTML, so it must *not*
+        be HTML-escaped — ``&quot;`` would reach ``JSON.parse`` verbatim and
+        fail. ``<``, ``>`` and ``&`` are escaped as JSON unicode sequences
+        instead, which ``JSON.parse`` decodes and which cannot terminate the
+        script element early.
+        """
+        safe = (
+            serialized.replace("<", "\\u003c")
+            .replace(">", "\\u003e")
+            .replace("&", "\\u0026")
+        )
+        root_id = html.escape(self.config.root_id, quote=True)
+        return f'<script type="application/json" data-page="{root_id}">{safe}</script>'
 
     def _view_value(self, value: Any) -> str:
         if isinstance(value, HtmlString):

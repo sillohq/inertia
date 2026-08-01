@@ -69,10 +69,19 @@ Your `resources/views/app.html` must include the `{{ inertia }}` placeholder:
     {{ inertia_head }}
   </head>
   <body>
-    <div id="app" data-page='{{ inertia }}'></div>
+    <div id="{{ root_id }}"></div>
+    {{ inertia }}
   </body>
 </html>
 ```
+
+`{{ inertia }}` expands to a `<script type="application/json" data-page="app">`
+element holding the page object — that is where Inertia 2.x and later read it
+from. Do **not** put it on the root `<div>` as `data-page`: that was the 1.x
+convention, current clients never look there, and the page boots with a null
+page object and throws `Cannot read properties of null (reading 'component')`.
+If you are targeting a 1.x client, `{{ inertia_page }}` still gives you the
+HTML-escaped attribute value.
 
 ## Features
 

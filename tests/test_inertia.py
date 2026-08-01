@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import html
 import json
+import re
 from pathlib import Path
 
 import httpx
@@ -12,40 +12,50 @@ from sillo.core.http import Request, Response
 from sillo_inertia import Inertia, lazy, vite_react, vite_vue
 
 
+# The root views below use the markup Inertia 2.x/3.x actually reads: a
+# <script type="application/json" data-page="<id>"> element. The 1.x form,
+# data-page on the root div, is never consulted by current clients — they boot
+# with a null page and throw "Cannot read properties of null".
+ROOT_TEMPLATE = '<html><body><div id="{{ root_id }}"></div>{{ inertia }}</body></html>'
+ROOT_TEMPLATE_WITH_HEAD = (
+    "<html><head>{{ inertia_head }}</head><body>"
+    '<div id="{{ root_id }}"></div>{{ inertia }}'
+    "</body></html>"
+)
+
+
 def write_root(tmp_path: Path) -> Path:
     root = tmp_path / "app.html"
-    root.write_text(
-        "<html><body><div id=\"{{ root_id }}\" data-page='{{ inertia }}'></div></body></html>",
-        encoding="utf-8",
-    )
+    root.write_text(ROOT_TEMPLATE, encoding="utf-8")
     return root
 
 
 def write_root_with_head(tmp_path: Path) -> Path:
     root = tmp_path / "app.html"
-    root.write_text(
-        "<html><head>{{ inertia_head }}</head><body>"
-        "<div id=\"{{ root_id }}\" data-page='{{ inertia }}'></div>"
-        "</body></html>",
-        encoding="utf-8",
-    )
+    root.write_text(ROOT_TEMPLATE_WITH_HEAD, encoding="utf-8")
     return root
 
 
 def write_root_custom_id(tmp_path: Path, root_id: str) -> Path:
     root = tmp_path / "app.html"
-    root.write_text(
-        f"<html><body><div id=\"{{{{ root_id }}}}\" data-page='{{{{ inertia }}}}'></div></body></html>",
-        encoding="utf-8",
-    )
+    root.write_text(ROOT_TEMPLATE, encoding="utf-8")
     return root
 
 
 def extract_page(markup: str) -> dict:
-    prefix = "data-page='"
-    start = markup.index(prefix) + len(prefix)
-    end = markup.index("'", start)
-    return json.loads(html.unescape(markup[start:end]))
+    """Read the page object the way the Inertia client does.
+
+    Mirrors ``getInitialPageFromDOM``: find the JSON script tag and parse its
+    text content. The content is raw text, so it is *not* HTML-unescaped —
+    if the adapter ever HTML-escapes it, this parse fails, which is the point.
+    """
+    match = re.search(
+        r'<script type="application/json" data-page="[^"]*">(.*?)</script>',
+        markup,
+        re.DOTALL,
+    )
+    assert match is not None, f"no Inertia page script tag in: {markup}"
+    return json.loads(match.group(1))
 
 
 async def get_client(app: silloApp):
@@ -110,6 +120,32 @@ class TestInitialVisit:
         assert 'id="root"' in result.text
         page = extract_page(result.text)
         assert page["component"] == "Home"
+
+
+    @pytest.mark.asyncio
+    async def test_page_script_cannot_be_broken_out_of(self, tmp_path: Path) -> None:
+        """Markup in a prop must not terminate the script element early.
+
+        A <script> body is raw text, so HTML-escaping it would reach JSON.parse
+        as literal &quot; and fail. The adapter escapes <, > and & as JSON
+        unicode instead — which parses, and cannot close the tag.
+        """
+        app = silloApp()
+        inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
+
+        hostile = "</script><script>alert(1)</script>"
+
+        @app.get("/")
+        async def home(request: Request, response: Response):
+            return await inertia.render(request, response, "Home", {"bio": hostile})
+
+        async with await get_client(app) as client:
+            result = await client.get("/")
+
+        # The literal closing tag must not survive into the document.
+        assert "</script><script>alert(1)" not in result.text
+        # ...and the value must still round-trip through a real JSON parse.
+        assert extract_page(result.text)["props"]["bio"] == hostile
 
 
 class TestInertiaVisit:

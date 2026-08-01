@@ -5,6 +5,48 @@ All notable changes to Sillo Inertia will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **The page object is now emitted as a JSON script tag**, which is where
+  Inertia 2.x and later actually look for it:
+
+  ```html
+  <script type="application/json" data-page="app">{...}</script>
+  ```
+
+  Previously `{{ inertia }}` produced the HTML-escaped JSON intended for
+  `data-page` on the root `<div>` — the Inertia 1.x convention. Current clients
+  never read that attribute (`getInitialPageFromDOM` queries only for the
+  script element and returns `null` otherwise), so every page failed in the
+  browser with `TypeError: Cannot read properties of null (reading
+  'component')` from inside `createInertiaApp`.
+
+### Changed
+
+- **Breaking:** `{{ inertia }}` now renders a complete `<script>` element
+  rather than a bare attribute value. Update root views from
+
+  ```html
+  <div id="{{ root_id }}" data-page="{{ inertia }}"></div>
+  ```
+
+  to
+
+  ```html
+  <div id="{{ root_id }}"></div>
+  {{ inertia }}
+  ```
+
+  The old escaped-JSON value is still available as `{{ inertia_page }}` for
+  anyone deliberately targeting an Inertia 1.x client.
+
+- Page JSON inside the script tag is escaped with JSON unicode sequences
+  (`<`, `>`, `&`) rather than HTML entities. A `<script>` body
+  is raw text, so HTML escaping would reach `JSON.parse` verbatim and fail;
+  the unicode form parses correctly and cannot terminate the element early.
+
 ## [0.1.0] - 2026-07-30
 
 ### Added
