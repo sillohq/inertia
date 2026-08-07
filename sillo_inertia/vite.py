@@ -4,7 +4,6 @@ import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 
 @dataclass(frozen=True, slots=True)
@@ -91,8 +90,12 @@ def render_vite_react_tags(options: ViteReactOptions, base_dir: Path) -> str:
                     ]
                 )
             )
-        tags.append(f'<script type="module" src="{options.dev_server}/@vite/client"></script>')
-        tags.append(f'<script type="module" src="{options.dev_server}/{options.entry}"></script>')
+        tags.append(
+            f'<script type="module" src="{options.dev_server}/@vite/client"></script>'
+        )
+        tags.append(
+            f'<script type="module" src="{options.dev_server}/{options.entry}"></script>'
+        )
         return "\n".join(tags)
 
     return _render_vite_production_tags(options, base_dir)
@@ -118,7 +121,9 @@ def _render_vite_production_tags(options: ViteOptions, base_dir: Path) -> str:
     tags = []
     for css_file in asset.get("css", []):
         tags.append(f'<link rel="stylesheet" href="{_asset_url(options, css_file)}">')
-    tags.append(f'<script type="module" src="{_asset_url(options, asset["file"])}"></script>')
+    tags.append(
+        f'<script type="module" src="{_asset_url(options, asset["file"])}"></script>'
+    )
     return "\n".join(tags)
 
 

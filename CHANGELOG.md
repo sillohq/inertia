@@ -7,6 +7,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking: `render` and `redirect` no longer take `request` and
+  `response`.**
+
+  ```python
+  # before
+  return await inertia.render(request, response, "Home", {"name": "Sillo"})
+  # after
+  return await inertia.render("Home", {"name": "Sillo"})
+  ```
+
+  The request is read from the middleware the adapter already installs on
+  every request, and `render` returns a response of its own rather than
+  filling in one it was handed. Neither argument carried information the
+  adapter could not get for itself.
+
+  The old call raises a `TypeError` naming the new form rather than failing
+  somewhere further in. Where there is no request to read — a background job,
+  a test calling a handler directly — pass one explicitly with
+  `request=request`; without either, `render` raises `OutsideRequestError` and
+  says which case you are in.
+
+- **Breaking: `Inertia.location()` is synchronous.** It never awaited
+  anything. Drop the `await`.
+
+- Props callbacks may now take no arguments. `lambda _: value` still works;
+  `lambda: value` is now equivalent. This applies to `lazy()` callbacks, to
+  callable prop values, and to a callable passed as `props` itself.
+
+### Added
+
+- **`@inertia.page(component)`**, for handlers that only produce props:
+
+  ```python
+  @app.get("/users/{user_id}")
+  @inertia.page("Users/Show")
+  async def show(user_id):
+      return {"user": await User.get(id=user_id)}
+  ```
+
+  The function declares only the parameters it uses — `request` and `response`
+  are passed only if named. Returning a response instead of a mapping sends
+  that response unchanged, so a handler can still redirect out of a page.
+
+- **Module-level `render`, `redirect`, `back` and `location`.** They resolve
+  the adapter through the same middleware, so a routes module can build
+  Inertia responses without importing the module that owns the application —
+  and so without the circular import that would otherwise cause.
+
+- **`inertia.back()`**, redirecting to the `Referer`, with a `fallback` for
+  requests that do not carry one. The usual end of an Inertia form post.
+
+- **`headers=` on `render`**, merged with the `Vary` and `X-Inertia` headers
+  the adapter sets.
+
+- `current_request()` and `current_inertia()`, for reaching the bound request
+  or adapter directly.
+
 ### Fixed
 
 - **The page object is now emitted as a JSON script tag**, which is where

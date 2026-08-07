@@ -42,6 +42,20 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
+      # PyPI takes the version from the package, not the tag. Without this a
+      # tag of inertia-v0.2.0 against a pyproject still saying 0.1.0 publishes
+      # 0.1.0 and reports success, and the version it claims to have released
+      # is one that does not exist.
+      - name: The tag and the package must agree
+        run: |
+          TAG_VERSION="${{ steps.version.outputs.version }}"
+          PKG_VERSION=$(python -c "import tomllib,pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Tag says $TAG_VERSION, pyproject.toml says $PKG_VERSION."
+            exit 1
+          fi
+          echo "both say $PKG_VERSION"
+
       - name: Clean Old Builds
         run: rm -rf dist build *.egg-info
 

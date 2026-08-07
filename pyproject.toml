@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sillo-inertia"
-version = "0.0.1a2"
+version = "0.0.1a3"
 description = "Inertia.js adapter for Sillo with React/Vue/Vite support."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -101,7 +101,7 @@ target-version = "py310"
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.0.1a2"
+version = "0.0.1a3"
 version_files = [
     "pyproject.toml:version"
 ]

@@ -9,7 +9,13 @@ import pytest
 from sillo import silloApp
 from sillo.core.http import Request, Response
 
-from sillo_inertia import Inertia, lazy, vite_react, vite_vue
+from sillo_inertia import (
+    Inertia,
+    OutsideRequestError,
+    lazy,
+    vite_react,
+    vite_vue,
+)
 
 
 # The root views below use the markup Inertia 2.x/3.x actually reads: a
@@ -72,7 +78,7 @@ class TestInitialVisit:
 
         @app.get("/")
         async def home(request: Request, response: Response):
-            return await inertia.render(request, response, "Home", {"name": "Sillo"})
+            return await inertia.render("Home", {"name": "Sillo"})
 
         async with await get_client(app) as client:
             result = await client.get("/")
@@ -92,7 +98,7 @@ class TestInitialVisit:
 
         @app.get("/")
         async def home(request: Request, response: Response):
-            return await inertia.render(request, response, "Home")
+            return await inertia.render("Home")
 
         async with await get_client(app) as client:
             result = await client.get("/")
@@ -112,7 +118,7 @@ class TestInitialVisit:
 
         @app.get("/")
         async def home(request: Request, response: Response):
-            return await inertia.render(request, response, "Home")
+            return await inertia.render("Home")
 
         async with await get_client(app) as client:
             result = await client.get("/")
@@ -137,7 +143,7 @@ class TestInitialVisit:
 
         @app.get("/")
         async def home(request: Request, response: Response):
-            return await inertia.render(request, response, "Home", {"bio": hostile})
+            return await inertia.render("Home", {"bio": hostile})
 
         async with await get_client(app) as client:
             result = await client.get("/")
@@ -156,7 +162,7 @@ class TestInertiaVisit:
 
         @app.get("/users")
         async def users(request: Request, response: Response):
-            return await inertia.render(request, response, "Users/Index", {"users": ["Ada"]})
+            return await inertia.render("Users/Index", {"users": ["Ada"]})
 
         async with await get_client(app) as client:
             result = await client.get("/users?page=1", headers={"X-Inertia": "true"})
@@ -178,7 +184,7 @@ class TestInertiaVisit:
 
         @app.get("/dashboard")
         async def dashboard(request: Request, response: Response):
-            return await inertia.render(request, response, "Dashboard", {"count": 5})
+            return await inertia.render("Dashboard", {"count": 5})
 
         async with await get_client(app) as client:
             result = await client.get("/dashboard", headers={"X-Inertia": "true"})
@@ -194,7 +200,7 @@ class TestInertiaVisit:
 
         @app.get("/search")
         async def search(request: Request, response: Response):
-            return await inertia.render(request, response, "Search")
+            return await inertia.render("Search")
 
         async with await get_client(app) as client:
             result = await client.get(
@@ -213,8 +219,6 @@ class TestInertiaVisit:
         @app.get("/error")
         async def error(request: Request, response: Response):
             return await inertia.render(
-                request,
-                response,
                 "Error",
                 {"message": "Not found"},
                 status_code=404,
@@ -236,8 +240,6 @@ class TestPartialReload:
         @app.get("/")
         async def home(request: Request, response: Response):
             return await inertia.render(
-                request,
-                response,
                 "Home",
                 {"fresh": lazy(lambda _request: "yes"), "expensive": "skip"},
             )
@@ -262,8 +264,6 @@ class TestPartialReload:
         @app.get("/")
         async def home(request: Request, response: Response):
             return await inertia.render(
-                request,
-                response,
                 "Home",
                 {"a": 1, "b": 2, "c": 3},
             )
@@ -288,8 +288,6 @@ class TestPartialReload:
         @app.get("/")
         async def home(request: Request, response: Response):
             return await inertia.render(
-                request,
-                response,
                 "Home",
                 {"key": "value"},
             )
@@ -333,7 +331,7 @@ class TestVersionHandling:
 
         @app.get("/")
         async def home(request: Request, response: Response):
-            return await inertia.render(request, response, "Home")
+            return await inertia.render("Home")
 
         async with await get_client(app) as client:
             result = await client.get(
@@ -355,7 +353,7 @@ class TestVersionHandling:
 
         @app.get("/")
         async def home(request: Request, response: Response):
-            return await inertia.render(request, response, "Home")
+            return await inertia.render("Home")
 
         async with await get_client(app) as client:
             result = await client.get("/", headers={"X-Inertia": "true"})
@@ -376,7 +374,7 @@ class TestRedirect:
 
         @app.post("/save")
         async def save(request: Request, response: Response):
-            return inertia.redirect(request, response, "/")
+            return inertia.redirect("/")
 
         async with await get_client(app) as client:
             result = await client.post("/save", follow_redirects=False)
@@ -391,7 +389,7 @@ class TestRedirect:
 
         @app.get("/redirect")
         async def redirect_route(request: Request, response: Response):
-            return inertia.redirect(request, response, "/home")
+            return inertia.redirect("/home")
 
         async with await get_client(app) as client:
             result = await client.get("/redirect", follow_redirects=False)
@@ -405,7 +403,7 @@ class TestRedirect:
 
         @app.post("/save")
         async def save(request: Request, response: Response):
-            return inertia.redirect(request, response, "/", status_code=301)
+            return inertia.redirect("/", status_code=301)
 
         async with await get_client(app) as client:
             result = await client.post("/save", follow_redirects=False)
@@ -427,7 +425,7 @@ class TestViteReact:
 
         @app.get("/")
         async def home(request: Request, response: Response):
-            return await inertia.render(request, response, "Home")
+            return await inertia.render("Home")
 
         async with await get_client(app) as client:
             result = await client.get("/")
@@ -449,7 +447,7 @@ class TestViteReact:
 
         @app.get("/")
         async def home(request: Request, response: Response):
-            return await inertia.render(request, response, "Home")
+            return await inertia.render("Home")
 
         async with await get_client(app) as client:
             result = await client.get("/")
@@ -470,7 +468,7 @@ class TestViteReact:
 
         @app.get("/")
         async def home(request: Request, response: Response):
-            return await inertia.render(request, response, "Home")
+            return await inertia.render("Home")
 
         async with await get_client(app) as client:
             result = await client.get("/")
@@ -492,7 +490,7 @@ class TestViteVue:
 
         @app.get("/")
         async def home(request: Request, response: Response):
-            return await inertia.render(request, response, "Home")
+            return await inertia.render("Home")
 
         async with await get_client(app) as client:
             result = await client.get("/")
@@ -514,7 +512,7 @@ class TestViteVue:
 
         @app.get("/")
         async def home(request: Request, response: Response):
-            return await inertia.render(request, response, "Home")
+            return await inertia.render("Home")
 
         async with await get_client(app) as client:
             result = await client.get("/")
@@ -534,7 +532,7 @@ class TestViteVue:
 
         @app.get("/")
         async def home(request: Request, response: Response):
-            return await inertia.render(request, response, "Home")
+            return await inertia.render("Home")
 
         async with await get_client(app) as client:
             result = await client.get("/")
@@ -553,7 +551,7 @@ class TestProps:
 
         @app.get("/test")
         async def test(request: Request, response: Response):
-            return await inertia.render(request, response, "Test", get_props)
+            return await inertia.render("Test", get_props)
 
         async with await get_client(app) as client:
             result = await client.get("/test", headers={"X-Inertia": "true"})
@@ -568,8 +566,6 @@ class TestProps:
         @app.get("/")
         async def home(request: Request, response: Response):
             return await inertia.render(
-                request,
-                response,
                 "Home",
                 {"lazy_data": lazy(lambda _: {"value": "computed"})},
             )
@@ -589,7 +585,7 @@ class TestProps:
 
         @app.get("/")
         async def home(request: Request, response: Response):
-            return await inertia.render(request, response, "Home", get_props)
+            return await inertia.render("Home", get_props)
 
         async with await get_client(app) as client:
             result = await client.get("/", headers={"X-Inertia": "true"})
@@ -606,7 +602,7 @@ class TestViewData:
 
         @app.get("/")
         async def home(request: Request, response: Response):
-            return await inertia.render(request, response, "Home")
+            return await inertia.render("Home")
 
         # Note: initial visit doesn't use view_data in the test,
         # but we verify the attribute exists
@@ -620,8 +616,6 @@ class TestViewData:
         @app.get("/")
         async def home(request: Request, response: Response):
             return await inertia.render(
-                request,
-                response,
                 "Home",
                 view_data={"custom": "value"},
             )
@@ -630,3 +624,478 @@ class TestViewData:
             result = await client.get("/")
 
         assert result.status_code == 200
+
+
+class TestCurrentRequest:
+    """render() reads the request from the middleware rather than being handed it."""
+
+    @pytest.mark.asyncio
+    async def test_render_outside_a_request_explains_itself(self, tmp_path: Path) -> None:
+        inertia = Inertia(root_view=write_root(tmp_path), version="abc")
+
+        with pytest.raises(OutsideRequestError) as caught:
+            await inertia.render("Home")
+
+        message = str(caught.value)
+        assert "No active Inertia request" in message
+        # The three ways to get here are all actionable, so all three are named.
+        assert "inertia.middleware(app)" in message
+        assert "request=request" in message
+
+    @pytest.mark.asyncio
+    async def test_explicit_request_needs_no_middleware(self, tmp_path: Path) -> None:
+        """A background job or a test can still say which request it means."""
+        app = silloApp()
+        inertia = Inertia(root_view=write_root(tmp_path), version="abc")
+        captured: dict = {}
+
+        @app.get("/offline")
+        async def offline(request: Request, response: Response):
+            captured["response"] = await inertia.render(
+                "Home", {"ok": True}, request=request
+            )
+            return captured["response"]
+
+        async with await get_client(app) as client:
+            result = await client.get("/offline", headers={"X-Inertia": "true"})
+
+        assert result.json()["props"] == {"ok": True}
+
+    @pytest.mark.asyncio
+    async def test_the_old_call_shape_says_what_to_write_instead(
+        self, tmp_path: Path
+    ) -> None:
+        """render(request, response, "Home") was the 0.0.x signature.
+
+        Passing a request first now lands on the props argument, where it would
+        otherwise fail somewhere deep in prop resolution with nothing pointing
+        back at the call.
+        """
+        app = silloApp()
+        inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
+        errors: list = []
+
+        @app.get("/")
+        async def home(request: Request, response: Response):
+            try:
+                await inertia.render(request, response, "Home")  # type: ignore[arg-type]
+            except TypeError as exc:
+                errors.append(str(exc))
+            return await inertia.render("Home")
+
+        async with await get_client(app) as client:
+            await client.get("/", headers={"X-Inertia": "true"})
+
+        assert errors, "the old shape should not have been accepted"
+        assert 'inertia.render("Home"' in errors[0]
+        assert "request=request" in errors[0]
+
+    @pytest.mark.asyncio
+    async def test_concurrent_requests_do_not_see_each_other(
+        self, tmp_path: Path
+    ) -> None:
+        """The bound request is per-task, not global.
+
+        Both handlers are inside render() at the same time; a module-level
+        attribute instead of a ContextVar would have them rendering the same
+        URL.
+        """
+        import asyncio
+
+        app = silloApp()
+        inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
+        both_arrived = asyncio.Event()
+        arrived = 0
+
+        @app.get("/page")
+        async def page(request: Request, response: Response):
+            nonlocal arrived
+            arrived += 1
+            if arrived == 2:
+                both_arrived.set()
+            await asyncio.wait_for(both_arrived.wait(), timeout=5)
+            return await inertia.render("Page")
+
+        async with await get_client(app) as client:
+            first, second = await asyncio.gather(
+                client.get("/page?who=a", headers={"X-Inertia": "true"}),
+                client.get("/page?who=b", headers={"X-Inertia": "true"}),
+            )
+
+        assert {first.json()["url"], second.json()["url"]} == {
+            "/page?who=a",
+            "/page?who=b",
+        }
+
+
+class TestModuleLevelHelpers:
+    """Importable without the adapter, so a routes module need not import the app."""
+
+    @pytest.mark.asyncio
+    async def test_module_render(self, tmp_path: Path) -> None:
+        from sillo_inertia import render
+
+        app = silloApp()
+        Inertia(app, root_view=write_root(tmp_path), version="abc")
+
+        @app.get("/")
+        async def home(request: Request, response: Response):
+            return await render("Home", {"via": "module"})
+
+        async with await get_client(app) as client:
+            result = await client.get("/", headers={"X-Inertia": "true"})
+
+        assert result.json()["props"] == {"via": "module"}
+
+    @pytest.mark.asyncio
+    async def test_module_redirect(self, tmp_path: Path) -> None:
+        from sillo_inertia import redirect
+
+        app = silloApp()
+        Inertia(app, root_view=write_root(tmp_path), version="abc")
+
+        @app.post("/save")
+        async def save(request: Request, response: Response):
+            return redirect("/done")
+
+        async with await get_client(app) as client:
+            result = await client.post("/save", follow_redirects=False)
+
+        assert result.status_code == 303
+        assert result.headers["location"] == "/done"
+
+    @pytest.mark.asyncio
+    async def test_current_request_is_the_request_being_answered(
+        self, tmp_path: Path
+    ) -> None:
+        from sillo_inertia import current_request
+
+        app = silloApp()
+        Inertia(app, root_view=write_root(tmp_path), version="abc")
+
+        @app.get("/where")
+        async def where(request: Request, response: Response):
+            return response.json({"path": current_request().scope.get("path")})
+
+        async with await get_client(app) as client:
+            result = await client.get("/where")
+
+        assert result.json() == {"path": "/where"}
+
+
+class TestBack:
+    @pytest.mark.asyncio
+    async def test_back_returns_to_the_referring_page(self, tmp_path: Path) -> None:
+        app = silloApp()
+        inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
+
+        @app.post("/comments")
+        async def create(request: Request, response: Response):
+            return inertia.back()
+
+        async with await get_client(app) as client:
+            result = await client.post(
+                "/comments",
+                headers={"Referer": "/posts/1"},
+                follow_redirects=False,
+            )
+
+        assert result.status_code == 303
+        assert result.headers["location"] == "/posts/1"
+
+    @pytest.mark.asyncio
+    async def test_back_falls_back_without_a_referer(self, tmp_path: Path) -> None:
+        app = silloApp()
+        inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
+
+        @app.post("/comments")
+        async def create(request: Request, response: Response):
+            return inertia.back(fallback="/posts")
+
+        async with await get_client(app) as client:
+            result = await client.post("/comments", follow_redirects=False)
+
+        assert result.status_code == 303
+        assert result.headers["location"] == "/posts"
+
+
+class TestPageDecorator:
+    @pytest.mark.asyncio
+    async def test_handler_declares_nothing_and_returns_props(
+        self, tmp_path: Path
+    ) -> None:
+        app = silloApp()
+        inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
+
+        @app.get("/")
+        @inertia.page("Home")
+        async def home():
+            return {"name": "Sillo"}
+
+        async with await get_client(app) as client:
+            result = await client.get("/", headers={"X-Inertia": "true"})
+
+        assert result.json()["component"] == "Home"
+        assert result.json()["props"] == {"name": "Sillo"}
+
+    @pytest.mark.asyncio
+    async def test_path_parameters_still_reach_the_handler(self, tmp_path: Path) -> None:
+        app = silloApp()
+        inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
+
+        @app.get("/users/{user_id}")
+        @inertia.page("Users/Show")
+        async def show(user_id):
+            return {"id": user_id}
+
+        async with await get_client(app) as client:
+            result = await client.get("/users/7", headers={"X-Inertia": "true"})
+
+        assert result.json()["props"] == {"id": "7"}
+
+    @pytest.mark.asyncio
+    async def test_handler_may_still_ask_for_the_request(self, tmp_path: Path) -> None:
+        app = silloApp()
+        inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
+
+        @app.get("/search")
+        @inertia.page("Search")
+        async def search(request: Request):
+            return {"path": request.scope.get("path")}
+
+        async with await get_client(app) as client:
+            result = await client.get("/search", headers={"X-Inertia": "true"})
+
+        assert result.json()["props"] == {"path": "/search"}
+
+    @pytest.mark.asyncio
+    async def test_returning_a_response_passes_it_through(self, tmp_path: Path) -> None:
+        app = silloApp()
+        inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
+
+        @app.post("/users")
+        @inertia.page("Users/Create")
+        async def create():
+            return inertia.redirect("/users")
+
+        async with await get_client(app) as client:
+            result = await client.post("/users", follow_redirects=False)
+
+        assert result.status_code == 303
+        assert result.headers["location"] == "/users"
+
+    @pytest.mark.asyncio
+    async def test_returning_nothing_renders_an_empty_page(self, tmp_path: Path) -> None:
+        app = silloApp()
+        inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
+
+        @app.get("/about")
+        @inertia.page("About")
+        async def about():
+            return None
+
+        async with await get_client(app) as client:
+            result = await client.get("/about", headers={"X-Inertia": "true"})
+
+        assert result.json()["props"] == {}
+
+    @pytest.mark.asyncio
+    async def test_render_options_are_applied(self, tmp_path: Path) -> None:
+        app = silloApp()
+        inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
+
+        @app.get("/gone")
+        @inertia.page("NotFound", status_code=404)
+        async def gone():
+            return {}
+
+        async with await get_client(app) as client:
+            result = await client.get("/gone", headers={"X-Inertia": "true"})
+
+        assert result.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_a_sync_handler_works_too(self, tmp_path: Path) -> None:
+        app = silloApp()
+        inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
+
+        @app.get("/sync")
+        @inertia.page("Sync")
+        def sync_page():
+            return {"sync": True}
+
+        async with await get_client(app) as client:
+            result = await client.get("/sync", headers={"X-Inertia": "true"})
+
+        assert result.json()["props"] == {"sync": True}
+
+
+class TestPropsWithoutRequest:
+    """A callback takes the request only if it asks for one."""
+
+    @pytest.mark.asyncio
+    async def test_zero_argument_callable_prop(self, tmp_path: Path) -> None:
+        app = silloApp()
+        inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
+
+        @app.get("/")
+        async def home(request: Request, response: Response):
+            return await inertia.render("Home", {"total": lambda: 42})
+
+        async with await get_client(app) as client:
+            result = await client.get("/", headers={"X-Inertia": "true"})
+
+        assert result.json()["props"] == {"total": 42}
+
+    @pytest.mark.asyncio
+    async def test_zero_argument_lazy_prop(self, tmp_path: Path) -> None:
+        app = silloApp()
+        inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
+
+        @app.get("/")
+        async def home(request: Request, response: Response):
+            return await inertia.render("Home", {"slow": lazy(lambda: "done")})
+
+        async with await get_client(app) as client:
+            result = await client.get("/", headers={"X-Inertia": "true"})
+
+        assert result.json()["props"] == {"slow": "done"}
+
+    @pytest.mark.asyncio
+    async def test_zero_argument_props_factory(self, tmp_path: Path) -> None:
+        app = silloApp()
+        inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
+
+        @app.get("/")
+        async def home(request: Request, response: Response):
+            return await inertia.render("Home", lambda: {"from": "factory"})
+
+        async with await get_client(app) as client:
+            result = await client.get("/", headers={"X-Inertia": "true"})
+
+        assert result.json()["props"] == {"from": "factory"}
+
+    @pytest.mark.asyncio
+    async def test_async_zero_argument_prop(self, tmp_path: Path) -> None:
+        app = silloApp()
+        inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
+
+        async def count():
+            return 3
+
+        @app.get("/")
+        async def home(request: Request, response: Response):
+            return await inertia.render("Home", {"count": count})
+
+        async with await get_client(app) as client:
+            result = await client.get("/", headers={"X-Inertia": "true"})
+
+        assert result.json()["props"] == {"count": 3}
+
+    @pytest.mark.asyncio
+    async def test_a_bound_method_still_receives_the_request(
+        self, tmp_path: Path
+    ) -> None:
+        """__code__ counts self, so bound methods go through inspect.signature."""
+        app = silloApp()
+        inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
+
+        class Source:
+            def with_request(self, request):
+                return request.scope.get("path")
+
+            def without_request(self):
+                return "static"
+
+        source = Source()
+
+        @app.get("/methods")
+        async def methods(request: Request, response: Response):
+            return await inertia.render(
+                "Methods",
+                {"a": source.with_request, "b": source.without_request},
+            )
+
+        async with await get_client(app) as client:
+            result = await client.get("/methods", headers={"X-Inertia": "true"})
+
+        assert result.json()["props"] == {"a": "/methods", "b": "static"}
+
+
+class TestExtraHeaders:
+    @pytest.mark.asyncio
+    async def test_headers_are_sent_alongside_vary(self, tmp_path: Path) -> None:
+        app = silloApp()
+        inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
+
+        @app.get("/")
+        async def home(request: Request, response: Response):
+            return await inertia.render(
+                "Home", headers={"X-Total-Count": "9"}
+            )
+
+        async with await get_client(app) as client:
+            result = await client.get("/", headers={"X-Inertia": "true"})
+
+        assert result.headers["x-total-count"] == "9"
+        assert result.headers["vary"] == "X-Inertia"
+        assert result.headers["x-inertia"] == "true"
+
+
+class TestPageDecoratorAndTheRouter:
+    """The wrapper has to look to the router like an ordinary handler.
+
+    The router reads the handler's signature to place the validated body and to
+    resolve dependencies, and it does so positionally: the body candidates are
+    the parameters *after* request and response. A wrapper advertising only the
+    inner function's parameters shifts that window, and the body silently never
+    arrives.
+    """
+
+    @pytest.mark.asyncio
+    async def test_a_validated_body_still_reaches_the_handler(
+        self, tmp_path: Path
+    ) -> None:
+        from pydantic import BaseModel
+
+        class PostIn(BaseModel):
+            title: str
+
+        app = silloApp()
+        inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
+
+        @app.post("/posts", request_model=PostIn)
+        @inertia.page("Posts/Create")
+        async def create(data: PostIn):
+            return {"title": data.title}
+
+        async with await get_client(app) as client:
+            result = await client.post(
+                "/posts",
+                json={"title": "Hello"},
+                headers={"X-Inertia": "true"},
+            )
+
+        assert result.status_code == 200, result.text
+        assert result.json()["props"] == {"title": "Hello"}
+
+    @pytest.mark.asyncio
+    async def test_dependencies_are_still_injected(self, tmp_path: Path) -> None:
+        from sillo import Depend
+
+        app = silloApp()
+        inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
+
+        async def current_team():
+            return "acme"
+
+        @app.get("/team")
+        @inertia.page("Team")
+        async def team(team_name=Depend(current_team)):
+            return {"team": team_name}
+
+        async with await get_client(app) as client:
+            result = await client.get("/team", headers={"X-Inertia": "true"})
+
+        assert result.status_code == 200, result.text
+        assert result.json()["props"] == {"team": "acme"}

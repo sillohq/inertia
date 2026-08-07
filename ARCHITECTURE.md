@@ -212,7 +212,13 @@ inertia = Inertia(app, ...)
 # Automatically calls: app.use(inertia.handle_request)
 ```
 
-Middleware checks version on every Inertia request before route handler runs.
+The middleware does two things on every request, before the route handler
+runs:
+
+1. Binds the request into a `ContextVar`, which is what lets `render()` answer
+   the current request without being handed it. The variable is per-task, so
+   requests in flight at the same time do not see each other's.
+2. Checks the asset version, and turns away a client running a stale build.
 
 ## Async/Await Handling
 
@@ -224,8 +230,8 @@ async def get_props(request):
     return {"user": user}
 
 await inertia.render(
-    request, response, "Home",
-    get_props  # Called and awaited automatically
+    "Home",
+    get_props,  # Called and awaited automatically
 )
 ```
 
@@ -233,6 +239,8 @@ await inertia.render(
 - Uses `inspect.isawaitable()` to detect awaitable results
 - Each prop can be async independently
 - All awaits happen in parallel within `_resolve_props()`
+- A callback is passed the request only if its signature takes one, read from
+  `__code__` where possible and `inspect.signature` otherwise
 
 ## Error Handling
 
