@@ -18,8 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a resolver left free to pick an older core would hand you a framework those
   examples do not run against.
 
-  If you are still on `silloApp`, it keeps working under 0.0.2a1 with a
-  `DeprecationWarning` and is removed in sillo-core 0.1.0.
+  If you are still on `silloApp`: it warns under sillo-core 0.0.2a1 and is
+  removed outright in 0.0.2a2, where importing it raises.
 
 ### Removed
 
