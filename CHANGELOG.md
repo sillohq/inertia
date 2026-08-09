@@ -7,7 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.1a4] - 2026-08-09
+
 ### Changed
+
+- **Requires `sillo-framework>=0.0.2a1`**, where the application class was
+  renamed from `silloApp` to `SilloApp`. No code here names the class — the
+  adapter takes `app` as `Any` — so this changes nothing at runtime. The floor
+  is raised because the README and every example now spell it the new way, and
+  a resolver left free to pick an older core would hand you a framework those
+  examples do not run against.
+
+  If you are still on `silloApp`, it keeps working under 0.0.2a1 with a
+  `DeprecationWarning` and is removed in sillo-core 0.1.0.
+
+### Removed
+
+- **The explicit `aerich>=0.7.0` dependency.** It existed to work around
+  `sillo/record/helpers.py` doing `from aerich import Command` while the
+  framework's `[record]` extra declared only `tortoise-orm` — so `import
+  sillo_inertia` failed on a clean install without it. Sillo moved migrations
+  to Tortoise-native on 2026-08-01 and no longer imports aerich anywhere;
+  verified against a fresh environment with aerich absent. Raising the floor
+  to 0.0.2a1 makes the workaround unreachable, so it is gone. Existing
+  environments keep aerich; new ones no longer pull it in.
+
+### Changed (API)
 
 - **Breaking: `render` and `redirect` no longer take `request` and
   `response`.**

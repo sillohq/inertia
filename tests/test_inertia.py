@@ -6,7 +6,7 @@ from pathlib import Path
 
 import httpx
 import pytest
-from sillo import silloApp
+from sillo import SilloApp
 from sillo.core.http import Request, Response
 
 from sillo_inertia import (
@@ -64,7 +64,7 @@ def extract_page(markup: str) -> dict:
     return json.loads(match.group(1))
 
 
-async def get_client(app: silloApp):
+async def get_client(app: SilloApp):
     transport = httpx.ASGITransport(app=app)
     return httpx.AsyncClient(transport=transport, base_url="http://testserver")
 
@@ -72,7 +72,7 @@ async def get_client(app: silloApp):
 class TestInitialVisit:
     @pytest.mark.asyncio
     async def test_initial_visit_renders_html(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
         inertia.share(app_name="Demo")
 
@@ -93,7 +93,7 @@ class TestInitialVisit:
 
     @pytest.mark.asyncio
     async def test_initial_visit_with_no_props(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         @app.get("/")
@@ -108,7 +108,7 @@ class TestInitialVisit:
 
     @pytest.mark.asyncio
     async def test_initial_visit_with_custom_root_id(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(
             app,
             root_view=write_root_custom_id(tmp_path, "root"),
@@ -136,7 +136,7 @@ class TestInitialVisit:
         as literal &quot; and fail. The adapter escapes <, > and & as JSON
         unicode instead — which parses, and cannot close the tag.
         """
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         hostile = "</script><script>alert(1)</script>"
@@ -157,7 +157,7 @@ class TestInitialVisit:
 class TestInertiaVisit:
     @pytest.mark.asyncio
     async def test_inertia_visit_returns_page_json(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         @app.get("/users")
@@ -178,7 +178,7 @@ class TestInertiaVisit:
 
     @pytest.mark.asyncio
     async def test_inertia_visit_with_shared_props(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
         inertia.share(auth={"user": "John"})
 
@@ -195,7 +195,7 @@ class TestInertiaVisit:
 
     @pytest.mark.asyncio
     async def test_inertia_visit_with_query_params(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="v1")
 
         @app.get("/search")
@@ -213,7 +213,7 @@ class TestInertiaVisit:
 
     @pytest.mark.asyncio
     async def test_inertia_visit_with_status_code(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="v1")
 
         @app.get("/error")
@@ -233,7 +233,7 @@ class TestInertiaVisit:
 class TestPartialReload:
     @pytest.mark.asyncio
     async def test_partial_reload_filters_props(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
         inertia.share(app_name="Demo")
 
@@ -258,7 +258,7 @@ class TestPartialReload:
 
     @pytest.mark.asyncio
     async def test_partial_reload_with_multiple_props(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         @app.get("/")
@@ -282,7 +282,7 @@ class TestPartialReload:
 
     @pytest.mark.asyncio
     async def test_partial_reload_wrong_component(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         @app.get("/")
@@ -308,7 +308,7 @@ class TestPartialReload:
 class TestVersionHandling:
     @pytest.mark.asyncio
     async def test_version_mismatch_returns_location(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         Inertia(app, root_view=write_root(tmp_path), version="new")
 
         @app.get("/")
@@ -326,7 +326,7 @@ class TestVersionHandling:
 
     @pytest.mark.asyncio
     async def test_version_none_allows_mismatches(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version=None)
 
         @app.get("/")
@@ -343,7 +343,7 @@ class TestVersionHandling:
 
     @pytest.mark.asyncio
     async def test_dynamic_version_callable(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         version_counter = {"v": "1"}
 
         def get_version():
@@ -369,7 +369,7 @@ class TestVersionHandling:
 class TestRedirect:
     @pytest.mark.asyncio
     async def test_redirect_uses_303_for_mutating_requests(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         @app.post("/save")
@@ -384,7 +384,7 @@ class TestRedirect:
 
     @pytest.mark.asyncio
     async def test_redirect_uses_302_for_get(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         @app.get("/redirect")
@@ -398,7 +398,7 @@ class TestRedirect:
 
     @pytest.mark.asyncio
     async def test_redirect_custom_status_code(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         @app.post("/save")
@@ -414,7 +414,7 @@ class TestRedirect:
 class TestViteReact:
     @pytest.mark.asyncio
     async def test_vite_react_tags_are_injected_dev(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(
             app,
             root_view=write_root_with_head(tmp_path),
@@ -436,7 +436,7 @@ class TestViteReact:
 
     @pytest.mark.asyncio
     async def test_vite_react_without_refresh(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(
             app,
             root_view=write_root_with_head(tmp_path),
@@ -457,7 +457,7 @@ class TestViteReact:
 
     @pytest.mark.asyncio
     async def test_vite_react_custom_entry(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(
             app,
             root_view=write_root_with_head(tmp_path),
@@ -479,7 +479,7 @@ class TestViteReact:
 class TestViteVue:
     @pytest.mark.asyncio
     async def test_vite_vue_tags_are_injected_dev(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(
             app,
             root_view=write_root_with_head(tmp_path),
@@ -501,7 +501,7 @@ class TestViteVue:
 
     @pytest.mark.asyncio
     async def test_vite_vue_custom_entry(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(
             app,
             root_view=write_root_with_head(tmp_path),
@@ -521,7 +521,7 @@ class TestViteVue:
 
     @pytest.mark.asyncio
     async def test_vite_vue_custom_dev_server(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(
             app,
             root_view=write_root_with_head(tmp_path),
@@ -543,7 +543,7 @@ class TestViteVue:
 class TestProps:
     @pytest.mark.asyncio
     async def test_callable_props_are_resolved(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         def get_props(request: Request):
@@ -560,7 +560,7 @@ class TestProps:
 
     @pytest.mark.asyncio
     async def test_lazy_props_are_resolved(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         @app.get("/")
@@ -577,7 +577,7 @@ class TestProps:
 
     @pytest.mark.asyncio
     async def test_async_props_are_resolved(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         async def get_props(request: Request):
@@ -596,7 +596,7 @@ class TestProps:
 class TestViewData:
     @pytest.mark.asyncio
     async def test_view_data_is_rendered(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
         inertia.view_data["title"] = "Test Page"
 
@@ -610,7 +610,7 @@ class TestViewData:
 
     @pytest.mark.asyncio
     async def test_render_with_view_data_override(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         @app.get("/")
@@ -645,7 +645,7 @@ class TestCurrentRequest:
     @pytest.mark.asyncio
     async def test_explicit_request_needs_no_middleware(self, tmp_path: Path) -> None:
         """A background job or a test can still say which request it means."""
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(root_view=write_root(tmp_path), version="abc")
         captured: dict = {}
 
@@ -671,7 +671,7 @@ class TestCurrentRequest:
         otherwise fail somewhere deep in prop resolution with nothing pointing
         back at the call.
         """
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
         errors: list = []
 
@@ -702,7 +702,7 @@ class TestCurrentRequest:
         """
         import asyncio
 
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
         both_arrived = asyncio.Event()
         arrived = 0
@@ -735,7 +735,7 @@ class TestModuleLevelHelpers:
     async def test_module_render(self, tmp_path: Path) -> None:
         from sillo_inertia import render
 
-        app = silloApp()
+        app = SilloApp()
         Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         @app.get("/")
@@ -751,7 +751,7 @@ class TestModuleLevelHelpers:
     async def test_module_redirect(self, tmp_path: Path) -> None:
         from sillo_inertia import redirect
 
-        app = silloApp()
+        app = SilloApp()
         Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         @app.post("/save")
@@ -770,7 +770,7 @@ class TestModuleLevelHelpers:
     ) -> None:
         from sillo_inertia import current_request
 
-        app = silloApp()
+        app = SilloApp()
         Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         @app.get("/where")
@@ -786,7 +786,7 @@ class TestModuleLevelHelpers:
 class TestBack:
     @pytest.mark.asyncio
     async def test_back_returns_to_the_referring_page(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         @app.post("/comments")
@@ -805,7 +805,7 @@ class TestBack:
 
     @pytest.mark.asyncio
     async def test_back_falls_back_without_a_referer(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         @app.post("/comments")
@@ -824,7 +824,7 @@ class TestPageDecorator:
     async def test_handler_declares_nothing_and_returns_props(
         self, tmp_path: Path
     ) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         @app.get("/")
@@ -840,7 +840,7 @@ class TestPageDecorator:
 
     @pytest.mark.asyncio
     async def test_path_parameters_still_reach_the_handler(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         @app.get("/users/{user_id}")
@@ -855,7 +855,7 @@ class TestPageDecorator:
 
     @pytest.mark.asyncio
     async def test_handler_may_still_ask_for_the_request(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         @app.get("/search")
@@ -870,7 +870,7 @@ class TestPageDecorator:
 
     @pytest.mark.asyncio
     async def test_returning_a_response_passes_it_through(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         @app.post("/users")
@@ -886,7 +886,7 @@ class TestPageDecorator:
 
     @pytest.mark.asyncio
     async def test_returning_nothing_renders_an_empty_page(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         @app.get("/about")
@@ -901,7 +901,7 @@ class TestPageDecorator:
 
     @pytest.mark.asyncio
     async def test_render_options_are_applied(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         @app.get("/gone")
@@ -916,7 +916,7 @@ class TestPageDecorator:
 
     @pytest.mark.asyncio
     async def test_a_sync_handler_works_too(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         @app.get("/sync")
@@ -935,7 +935,7 @@ class TestPropsWithoutRequest:
 
     @pytest.mark.asyncio
     async def test_zero_argument_callable_prop(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         @app.get("/")
@@ -949,7 +949,7 @@ class TestPropsWithoutRequest:
 
     @pytest.mark.asyncio
     async def test_zero_argument_lazy_prop(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         @app.get("/")
@@ -963,7 +963,7 @@ class TestPropsWithoutRequest:
 
     @pytest.mark.asyncio
     async def test_zero_argument_props_factory(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         @app.get("/")
@@ -977,7 +977,7 @@ class TestPropsWithoutRequest:
 
     @pytest.mark.asyncio
     async def test_async_zero_argument_prop(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         async def count():
@@ -997,7 +997,7 @@ class TestPropsWithoutRequest:
         self, tmp_path: Path
     ) -> None:
         """__code__ counts self, so bound methods go through inspect.signature."""
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         class Source:
@@ -1025,7 +1025,7 @@ class TestPropsWithoutRequest:
 class TestExtraHeaders:
     @pytest.mark.asyncio
     async def test_headers_are_sent_alongside_vary(self, tmp_path: Path) -> None:
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         @app.get("/")
@@ -1061,7 +1061,7 @@ class TestPageDecoratorAndTheRouter:
         class PostIn(BaseModel):
             title: str
 
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         @app.post("/posts", request_model=PostIn)
@@ -1083,7 +1083,7 @@ class TestPageDecoratorAndTheRouter:
     async def test_dependencies_are_still_injected(self, tmp_path: Path) -> None:
         from sillo import Depend
 
-        app = silloApp()
+        app = SilloApp()
         inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
 
         async def current_team():

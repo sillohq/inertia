@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sillo-inertia"
-version = "0.0.1a3"
+version = "0.0.1a4"
 description = "Inertia.js adapter for Sillo with React/Vue/Vite support."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -20,12 +20,13 @@ dependencies = [
     # [record] is not optional here: `import sillo` reaches sillo.users.base,
     # which imports tortoise at module scope. A bare sillo-framework install
     # makes `import sillo_inertia` fail with ModuleNotFoundError: 'tortoise'.
-    "sillo-framework[record]>=0.0.1a1",
-    # Workaround for an upstream gap: that same import chain ends at
-    # sillo/record/helpers.py doing `from aerich import Command`, but the
-    # [record] extra only declares tortoise-orm. Drop this line once
-    # sillo-framework ships aerich in [record].
-    "aerich>=0.7.0",
+    #
+    # The floor is 0.0.2a1 because that is where the application class became
+    # `SilloApp`. Nothing in sillo_inertia names it — the adapter takes `app`
+    # as Any — but the README and every example here now spell it the new
+    # way, and a resolver free to pick an older core would hand users a
+    # framework those examples do not run against.
+    "sillo-framework[record]>=0.0.2a1",
 ]
 
 [project.optional-dependencies]
@@ -101,7 +102,7 @@ target-version = "py310"
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.0.1a3"
+version = "0.0.1a4"
 version_files = [
     "pyproject.toml:version"
 ]
