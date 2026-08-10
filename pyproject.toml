@@ -12,9 +12,6 @@ license = "BSD-3-Clause"
 authors = [
     {name = "Chidebele Dunamis", email = "techwithdunamix@gmail.com"}
 ]
-homepage = "https://github.com/sillohq/inertia"
-repository = "https://github.com/sillohq/inertia"
-documentation = "https://sillolabs.com"
 keywords = ["sillo", "inertia", "react", "vue", "vite", "asgi", "spa"]
 dependencies = [
     # [record] is not optional here: `import sillo` reaches sillo.users.base,
@@ -28,6 +25,12 @@ dependencies = [
     # framework those examples do not run against.
     "sillo-framework[record]>=0.0.2a1",
 ]
+
+[project.urls]
+Homepage = "https://github.com/sillohq/inertia"
+Repository = "https://github.com/sillohq/inertia"
+Documentation = "https://docs.sillo.build"
+Issues = "https://github.com/sillohq/inertia/issues"
 
 [project.optional-dependencies]
 dev = [
