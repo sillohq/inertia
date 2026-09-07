@@ -1,12 +1,12 @@
-"""The request the adapter is currently answering.
+"""The context the adapter is currently answering.
 
 Every Inertia response is a function of the request that asked for it: the URL
 goes into the page object, ``X-Inertia`` decides between JSON and HTML, and the
-partial-reload headers decide which props survive. Threading that request
-through every call by hand is noise — the handler already has it, and the
-adapter already runs middleware on every request.
+partial-reload headers decide which props survive. Threading that through every
+call by hand is noise — the handler already has the context, and the adapter
+already runs middleware on every request.
 
-So the middleware records it here, and :func:`current_request` reads it back.
+So the middleware records it here, and :func:`current_context` reads it back.
 The value is a :class:`~contextvars.ContextVar`, which is per-task rather than
 global: two requests in flight at once each see their own.
 """
@@ -17,22 +17,22 @@ from contextvars import ContextVar, Token
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from sillo.core.http import Request
+    from sillo.core.http import HttpContext
 
     from .adapter import Inertia
 
-_active: ContextVar[tuple[Inertia, Request] | None] = ContextVar(
+_active: ContextVar[tuple[Inertia, HttpContext] | None] = ContextVar(
     "sillo_inertia_active", default=None
 )
 
 
 class OutsideRequestError(RuntimeError):
-    """Raised when the adapter is asked for a request that is not there."""
+    """Raised when the adapter is asked for a context that is not there."""
 
 
 _NOT_BOUND = """No active Inertia request.
 
-{what} reads the current request from the middleware that Inertia installs on
+{what} reads the current context from the middleware that Inertia installs on
 the application. There are three ways to end up here:
 
   1. The adapter was never attached. Pass the app when you build it, or attach
@@ -43,19 +43,19 @@ the application. There are three ways to end up here:
          inertia.middleware(app)
 
   2. The call is outside a request — a background job, a script, a test that
-     calls the handler directly. Pass the request explicitly there:
+     calls the handler directly. Pass the context explicitly there:
 
-         await inertia.render("Home", props, request=request)
+         await inertia.render("Home", props, ctx=ctx)
 
   3. The call escaped the request's task, for instance by handing work to a
-     thread or a task group that does not copy the context. Read the request
+     thread or a task group that does not copy the context. Read the context
      in the handler and pass it down.
 """
 
 
-def bind(adapter: Inertia, request: Request) -> Token:
-    """Record the adapter and request for the duration of this request."""
-    return _active.set((adapter, request))
+def bind(adapter: Inertia, ctx: HttpContext) -> Token:
+    """Record the adapter and context for the duration of this request."""
+    return _active.set((adapter, ctx))
 
 
 def unbind(token: Token) -> None:
@@ -63,13 +63,13 @@ def unbind(token: Token) -> None:
     _active.reset(token)
 
 
-def active() -> tuple[Inertia, Request] | None:
-    """Return the bound ``(adapter, request)`` pair, or ``None``."""
+def active() -> tuple[Inertia, HttpContext] | None:
+    """Return the bound ``(adapter, ctx)`` pair, or ``None``."""
     return _active.get()
 
 
-def current_request() -> Request:
-    """Return the request being answered.
+def current_context() -> HttpContext:
+    """Return the context being answered.
 
     Raises:
         OutsideRequestError: If no Inertia middleware is active on this task.

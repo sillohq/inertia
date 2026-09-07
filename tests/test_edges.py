@@ -26,6 +26,14 @@ from sillo_inertia import (
     render,
 )
 
+
+#: The two props the adapter shares on every page without being asked: the
+#: validation error bag and the flash bag, both empty here because nothing in
+#: these tests installs a session. They are part of Inertia's protocol — the
+#: client reads `errors` by that exact name — so every page object carries them
+#: and every exact-props assertion below has to say so.
+SHARED_PROPS = {"errors": {}, "flash": {}}
+
 ROOT = '<html><body><div id="{{ root_id }}"></div>{{ inertia }}</body></html>'
 
 
@@ -63,7 +71,7 @@ class TestTheRootView:
         Inertia(app=app, root_view=tmp_path / "nope" / "app.html", base_dir=tmp_path)
 
         @app.get("/")
-        async def home(request, response):
+        async def home(ctx):
             return await render("Home", {})
 
         # Sillo's ServerErrorMiddleware catches it, so this surfaces as a 500
@@ -85,14 +93,14 @@ class TestTheRootView:
         Inertia(app=app, root_view=tmp_path / "missing.html", base_dir=tmp_path)
 
         @app.get("/")
-        async def home(request, response):
+        async def home(ctx):
             return await render("Home", {"ok": True})
 
         async with await client_for(app) as client:
             response = await client.get("/", headers={"X-Inertia": "true"})
 
         assert response.status_code == 200
-        assert response.json()["props"] == {"ok": True}
+        assert response.json()["props"] == {**SHARED_PROPS, "ok": True}
 
 
 class TestViewDataEscaping:
@@ -105,7 +113,7 @@ class TestViewDataEscaping:
         Inertia(app=app, root_view=root, base_dir=tmp_path, view_data={"title": "<script>x</script>"})
 
         @app.get("/")
-        async def home(request, response):
+        async def home(ctx):
             return await render("Home", {})
 
         async with await client_for(app) as client:
@@ -130,7 +138,7 @@ class TestViewDataEscaping:
         )
 
         @app.get("/")
-        async def home(request, response):
+        async def home(ctx):
             return await render("Home", {})
 
         async with await client_for(app) as client:
@@ -147,7 +155,7 @@ class TestViewDataEscaping:
         Inertia(app=app, root_view=root, base_dir=tmp_path, view_data={"title": "default"})
 
         @app.get("/")
-        async def home(request, response):
+        async def home(ctx):
             return await render("Home", {}, view_data={"title": "specific"})
 
         async with await client_for(app) as client:
@@ -164,11 +172,11 @@ class TestTheVersionGate:
         Inertia(app=app, root_view=write_root(tmp_path), base_dir=tmp_path, version=version)
 
         @app.get("/page")
-        async def page(request, response):
+        async def page(ctx):
             return await render("Page", {})
 
         @app.post("/page")
-        async def submit(request, response):
+        async def submit(ctx):
             return await render("Page", {})
 
         return app
@@ -229,7 +237,7 @@ class TestModuleLevelBackAndLocation:
         Inertia(app=app, root_view=write_root(tmp_path), base_dir=tmp_path)
 
         @app.post("/submit")
-        async def submit(request, response):
+        async def submit(ctx):
             return back(fallback="/fallback")
 
         async with await client_for(app) as client:
@@ -245,7 +253,7 @@ class TestModuleLevelBackAndLocation:
         Inertia(app=app, root_view=write_root(tmp_path), base_dir=tmp_path)
 
         @app.post("/submit")
-        async def submit(request, response):
+        async def submit(ctx):
             return back(fallback="/fallback")
 
         async with await client_for(app) as client:
@@ -258,7 +266,7 @@ class TestModuleLevelBackAndLocation:
         Inertia(app=app, root_view=write_root(tmp_path), base_dir=tmp_path)
 
         @app.get("/leave")
-        async def leave(request, response):
+        async def leave(ctx):
             return location("https://example.com/elsewhere")
 
         async with await client_for(app) as client:
@@ -274,7 +282,7 @@ class TestHistoryFlags:
         Inertia(app=app, root_view=write_root(tmp_path), base_dir=tmp_path)
 
         @app.get("/")
-        async def home(request, response):
+        async def home(ctx):
             return await render("Home", {}, encrypt_history=True)
 
         async with await client_for(app) as client:
@@ -287,7 +295,7 @@ class TestHistoryFlags:
         Inertia(app=app, root_view=write_root(tmp_path), base_dir=tmp_path)
 
         @app.get("/")
-        async def home(request, response):
+        async def home(ctx):
             return await render("Home", {}, clear_history=True)
 
         async with await client_for(app) as client:
@@ -302,7 +310,7 @@ class TestHistoryFlags:
         Inertia(app=app, root_view=write_root(tmp_path), base_dir=tmp_path)
 
         @app.get("/")
-        async def home(request, response):
+        async def home(ctx):
             return await render("Home", {})
 
         async with await client_for(app) as client:
@@ -324,7 +332,7 @@ class TestCaching:
         Inertia(app=app, root_view=write_root(tmp_path), base_dir=tmp_path)
 
         @app.get("/")
-        async def home(request, response):
+        async def home(ctx):
             return await render("Home", {})
 
         async with await client_for(app) as client:
@@ -345,7 +353,7 @@ class TestPartialReloadsAndLazyProps:
         Inertia(app=app, root_view=write_root(tmp_path), base_dir=tmp_path)
 
         @app.get("/")
-        async def home(request, response):
+        async def home(ctx):
             return await render(
                 "Home",
                 {
@@ -371,7 +379,7 @@ class TestPartialReloadsAndLazyProps:
         Inertia(app=app, root_view=write_root(tmp_path), base_dir=tmp_path)
 
         @app.get("/")
-        async def home(request, response):
+        async def home(ctx):
             return await render("Home", {"cheap": 1, "expensive": lazy(lambda: "value")})
 
         async with await client_for(app) as client:
@@ -386,7 +394,7 @@ class TestPartialReloadsAndLazyProps:
                 )
             ).json()
 
-        assert page["props"] == {"expensive": "value"}
+        assert page["props"] == {**SHARED_PROPS, "expensive": "value"}
 
     async def test_a_shared_prop_can_be_partially_reloaded(self, tmp_path):
         app = SilloApp()
@@ -394,7 +402,7 @@ class TestPartialReloadsAndLazyProps:
         inertia.share(auth={"user": "ada"})
 
         @app.get("/")
-        async def home(request, response):
+        async def home(ctx):
             return await render("Home", {"page": 1})
 
         async with await client_for(app) as client:
@@ -409,14 +417,14 @@ class TestPartialReloadsAndLazyProps:
                 )
             ).json()
 
-        assert page["props"] == {"auth": {"user": "ada"}}
+        assert page["props"] == {**SHARED_PROPS, "auth": {"user": "ada"}}
 
     async def test_whitespace_around_partial_names_is_tolerated(self, tmp_path):
         app = SilloApp()
         Inertia(app=app, root_view=write_root(tmp_path), base_dir=tmp_path)
 
         @app.get("/")
-        async def home(request, response):
+        async def home(ctx):
             return await render("Home", {"a": 1, "b": 2, "c": 3})
 
         async with await client_for(app) as client:
@@ -431,7 +439,7 @@ class TestPartialReloadsAndLazyProps:
                 )
             ).json()
 
-        assert page["props"] == {"a": 1, "b": 2}
+        assert page["props"] == {**SHARED_PROPS, "a": 1, "b": 2}
 
 
 class TestPropsThatLookLikeMarkup:
@@ -444,7 +452,7 @@ class TestPropsThatLookLikeMarkup:
         Inertia(app=app, root_view=write_root(tmp_path), base_dir=tmp_path)
 
         @app.get("/")
-        async def home(request, response):
+        async def home(ctx):
             return await render(
                 "Home", {"bio": "</script><img src=x onerror=alert(1)>"}
             )
@@ -480,7 +488,7 @@ class TestPropsThatLookLikeMarkup:
         Inertia(app=app, root_view=write_root(tmp_path), base_dir=tmp_path)
 
         @app.get("/")
-        async def home(request, response):
+        async def home(ctx):
             return await render("Home", {"q": "a & b <c> d"})
 
         async with await client_for(app) as client:

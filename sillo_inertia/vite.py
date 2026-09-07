@@ -116,7 +116,25 @@ def _render_vite_production_tags(options: ViteOptions, base_dir: Path) -> str:
     manifest_path = Path(options.manifest_path)
     if not manifest_path.is_absolute():
         manifest_path = base_dir / manifest_path
+
+    # Both failures below are the same mistake seen from two angles — the front
+    # end has not been built, or was built with different settings — and both
+    # otherwise surface as a bare KeyError or FileNotFoundError from inside a
+    # JSON load, which says nothing about Vite.
+    if not manifest_path.is_file():
+        raise FileNotFoundError(
+            f"No Vite manifest at {manifest_path}. Run `npm run build`, or set "
+            f"the adapter's `dev=True` to load assets from the dev server "
+            f"instead."
+        )
+
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if options.entry not in manifest:
+        raise KeyError(
+            f"The Vite manifest at {manifest_path} has no entry {options.entry!r}. "
+            f"It has: {', '.join(sorted(manifest)) or '(nothing)'}. The entry "
+            f"must match `build.rollupOptions.input` in vite.config.ts exactly."
+        )
     asset = manifest[options.entry]
     tags = []
     for css_file in asset.get("css", []):

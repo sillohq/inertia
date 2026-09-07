@@ -14,8 +14,16 @@ import pytest
 from sillo import SilloApp
 
 from sillo_inertia import Inertia, OutsideRequestError, render
-from sillo_inertia.adapter import _wants_request
-from sillo_inertia.context import active, current_inertia, current_request
+from sillo_inertia.adapter import _wants_context
+from sillo_inertia.context import active, current_inertia, current_context
+
+
+#: The two props the adapter shares on every page without being asked: the
+#: validation error bag and the flash bag, both empty here because nothing in
+#: these tests installs a session. They are part of Inertia's protocol — the
+#: client reads `errors` by that exact name — so every page object carries them
+#: and every exact-props assertion below has to say so.
+SHARED_PROPS = {"errors": {}, "flash": {}}
 
 ROOT = '<html><body><div id="{{ root_id }}"></div>{{ inertia }}</body></html>'
 
@@ -37,16 +45,16 @@ class TestWhetherACallbackWantsTheRequest:
     apart without calling them first."""
 
     def test_a_lambda_taking_nothing(self):
-        assert _wants_request(lambda: 1) is False
+        assert _wants_context(lambda: 1) is False
 
     def test_a_lambda_taking_the_request(self):
-        assert _wants_request(lambda request: request) is True
+        assert _wants_context(lambda request: request) is True
 
     def test_a_function_with_varargs_counts_as_wanting_it(self):
         def callback(*args):
             return args
 
-        assert _wants_request(callback) is True
+        assert _wants_context(callback) is True
 
     def test_a_bound_method_ignores_its_self_parameter(self):
         class Props:
@@ -56,8 +64,8 @@ class TestWhetherACallbackWantsTheRequest:
             def with_request(self, request):
                 return request
 
-        assert _wants_request(Props().value) is False
-        assert _wants_request(Props().with_request) is True
+        assert _wants_context(Props().value) is False
+        assert _wants_context(Props().with_request) is True
 
     @pytest.mark.parametrize("builtin", [min, int, range])
     def test_a_builtin_with_no_readable_signature_is_given_the_request(self, builtin):
@@ -69,14 +77,14 @@ class TestWhetherACallbackWantsTheRequest:
         adapter cannot tell which, so it picks the case that is true of every
         callback written against the documented signature.
         """
-        assert _wants_request(builtin) is True
+        assert _wants_context(builtin) is True
 
     def test_a_callable_object_is_read_through_its_call(self):
         class Callable:
             def __call__(self, request):
                 return request
 
-        assert _wants_request(Callable()) is True
+        assert _wants_context(Callable()) is True
 
 
 class TestTheContextHelpers:
@@ -92,11 +100,11 @@ class TestTheContextHelpers:
         # The message is the whole value of this error: it has to name all
         # three ways of getting here, because they need different fixes.
         assert "inertia.middleware(app)" in message
-        assert "request=request" in message
+        assert "ctx=ctx" in message
 
     def test_current_request_outside_a_request_explains_itself(self):
         with pytest.raises(OutsideRequestError) as caught:
-            current_request()
+            current_context()
 
         assert "No active Inertia request" in str(caught.value)
 
@@ -107,7 +115,7 @@ class TestTheContextHelpers:
         adapter = Inertia(app=app, root_view=write_root(tmp_path), base_dir=tmp_path)
 
         @app.get("/")
-        async def home(request, response):
+        async def home(ctx):
             seen["pair"] = active()
             return await render("Home", {})
 
@@ -130,9 +138,9 @@ class TestTheOldCallShapes:
         captured: dict = {}
 
         @app.get("/")
-        async def home(request, response):
+        async def home(ctx):
             try:
-                adapter.redirect(request, response, "/dashboard")
+                adapter.redirect(ctx, None, "/dashboard")
             except TypeError as error:
                 captured["message"] = str(error)
             return await render("Home", {})
@@ -150,7 +158,7 @@ class TestTheOldCallShapes:
         captured: dict = {}
 
         @app.get("/")
-        async def home(request, response):
+        async def home(ctx):
             try:
                 adapter.redirect(object())
             except TypeError as error:
@@ -164,10 +172,9 @@ class TestTheOldCallShapes:
 
 
 class TestThePageDecoratorInjection:
-    async def test_a_handler_that_declares_response_receives_it(self, tmp_path):
-        """The decorator passes ``request`` and ``response`` only to handlers
-        that ask for them, so a handler declaring neither is not handed two
-        arguments it never named."""
+    async def test_a_handler_that_declares_a_context_receives_it(self, tmp_path):
+        """The decorator passes the context only to a handler that asks for it,
+        so one declaring nothing is not handed an argument it never named."""
         seen: dict = {}
 
         app = SilloApp()
@@ -175,17 +182,21 @@ class TestThePageDecoratorInjection:
 
         @app.get("/")
         @inertia.page("Home")
-        async def home(response):
-            seen["response"] = response
+        async def home(ctx):
+            seen["ctx"] = ctx
             return {"ok": True}
 
         async with await client_for(app) as client:
             page = (await client.get("/", headers={"X-Inertia": "true"})).json()
 
-        assert seen["response"] is not None
-        assert page["props"] == {"ok": True}
+        assert seen["ctx"] is not None
+        assert seen["ctx"].method == "GET"
+        assert page["props"] == {**SHARED_PROPS, "ok": True}
 
-    async def test_a_handler_may_declare_both(self, tmp_path):
+    async def test_a_handler_declaring_nothing_is_called_with_nothing(self, tmp_path):
+        """The counterpart. The wrapper still advertises a `ctx` parameter to
+        the router — it has to, the router calls every handler with one — but
+        does not forward it to a function that did not declare it."""
         seen: dict = {}
 
         app = SilloApp()
@@ -193,11 +204,12 @@ class TestThePageDecoratorInjection:
 
         @app.get("/")
         @inertia.page("Home")
-        async def home(request, response):
-            seen["both"] = (request is not None, response is not None)
+        async def home():
+            seen["called"] = True
             return {}
 
         async with await client_for(app) as client:
-            await client.get("/", headers={"X-Inertia": "true"})
+            page = (await client.get("/", headers={"X-Inertia": "true"})).json()
 
-        assert seen["both"] == (True, True)
+        assert seen["called"] is True
+        assert page["props"] == SHARED_PROPS

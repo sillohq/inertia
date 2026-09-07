@@ -7,6 +7,94 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0.dev1] - 2026-09-07
+
+Development pre-release for testing against `sillo-framework==0.3.2.dev1`.
+Install both with:
+
+```
+pip install --pre "sillo-framework==0.3.2.dev1" "sillo-inertia==0.1.0.dev1"
+```
+
+The adapter now runs on Sillo v1, and speaks the parts of the Inertia protocol
+it had never implemented.
+
+### Changed
+
+- **Breaking: ported to the Sillo v1 context API.** `Request` and the
+  `Responder` builder no longer exist in Sillo, so every signature that named
+  them has changed. A handler takes one argument, the context:
+
+  ```python
+  # before
+  async def home(request: Request, response: Response):
+      return await render("Home", {"name": "Sillo"})
+
+  # after
+  async def home(ctx: HttpContext):
+      return await render("Home", {"name": "Sillo"})
+  ```
+
+  `render`, `redirect` and `back` take `ctx=` where they took `request=`;
+  `current_request()` is now `current_context()`; a props callback that wants
+  the request is handed the context instead. **Requires
+  `sillo-framework>=0.3.2`** — on an earlier core, `import sillo_inertia`
+  raises `ImportError: cannot import name 'Request'`.
+
+- **`lazy()` no longer runs on a normal visit.** It resolved the callback on
+  every render and only filtered it out of *partial* reloads, which is
+  backwards — the wrapper exists so the work is not done until something asks
+  for it. It is now excluded from a standard visit and sent only when a partial
+  reload names it, which is what Inertia's own adapters do and what the
+  docstring always claimed. `optional()` is the current name; `lazy` is an
+  alias and stays one.
+
+### Added
+
+- **Deferred props** — `defer(callback, group="charts")`. The first response
+  omits the value and announces it in `deferredProps`; the client renders the
+  page and immediately fetches the group. Props sharing a group arrive in one
+  request, so one slow aggregate does not hold up three fast ones.
+
+- **Merge props** — `merge(value)` and `deep_merge(value, match_on="id")`,
+  reported as `mergeProps` / `deepMergeProps` / `matchPropsOn`, so a paged list
+  appends to what the client holds instead of replacing it. `X-Inertia-Reset`
+  is honoured: a prop the client asked to reset is still sent, but is no longer
+  named in the merge lists.
+
+- **`always(value)`** — a prop that survives a partial reload it was not named
+  in. `errors` and `flash` are registered this way, so a form post that
+  redirects into a partial reload still delivers its messages.
+
+- **Validation errors and flash**, via `set_errors(ctx, {...})` and
+  `set_flash(ctx, level, message)`. Both live in the session for exactly one
+  request, which is what makes them survive the redirect that ends a form post.
+  `errors` is the name Inertia's `useForm` reads, so it is not configurable.
+  Named error bags are supported through `X-Inertia-Error-Bag`. With no session
+  middleware installed both are empty rather than an error.
+
+- **`X-Inertia-Partial-Except`**, and dotted partial keys — `only: ["order.customer"]`
+  now narrows a nested prop instead of sending the whole of it.
+
+### Fixed
+
+- **A `Decimal` anywhere in a prop tree 500'd the page.** Props were serialised
+  with a plain `json.dumps`, which refuses `Decimal` outright and names only
+  the type in the error — on a page carrying forty values that says nothing
+  about which one. Props now go through an encoder that handles `Decimal`,
+  `datetime`/`date`/`time`, `timedelta`, `UUID`, `Enum`, `set` and anything
+  with `model_dump`/`dict`/`to_dict`. Money is formatted with
+  `format(value, "f")`, never `str()`: SQLite returns `Decimal("6.7E+2")` for a
+  stored `670.00`, and `str()` on that renders in the UI as the literal
+  `6.7E+2`.
+
+- **A 302 answering a PUT, PATCH or DELETE is corrected to 303.** On a 302 the
+  browser repeats the *method* against the new URL, so a redirect after a
+  successful update issued a second update. `inertia.redirect()` already chose
+  303; a handler returning Sillo's own `redirect()` did not, and now the
+  middleware fixes it either way.
+
+
 ## [0.0.1a4] - 2026-08-09
 
 ### Changed

@@ -265,7 +265,7 @@ class TestThroughARealRender:
         )
 
         @app.get("/")
-        async def home(request, response):
+        async def home(ctx):
             return await render("Home", {})
 
         transport = httpx.ASGITransport(app=app)
@@ -287,7 +287,7 @@ class TestThroughARealRender:
         Inertia(app=app, root_view=root, base_dir=tmp_path)
 
         @app.get("/")
-        async def home(request, response):
+        async def home(ctx):
             return await render("Home", {})
 
         transport = httpx.ASGITransport(app=app)
