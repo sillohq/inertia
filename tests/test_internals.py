@@ -126,51 +126,6 @@ class TestTheContextHelpers:
         assert seen["pair"][0] is adapter
 
 
-class TestTheOldCallShapes:
-    """The adapter used to take ``(request, response, ...)`` first. Both
-    entry points absorb the old positionals so the error can say what to
-    write instead, rather than Python raising an arity message first."""
-
-    async def test_redirect_with_the_old_arguments_says_what_to_write(self, tmp_path):
-        app = SilloApp()
-        adapter = Inertia(app=app, root_view=write_root(tmp_path), base_dir=tmp_path)
-
-        captured: dict = {}
-
-        @app.get("/")
-        async def home(ctx):
-            try:
-                adapter.redirect(ctx, None, "/dashboard")
-            except TypeError as error:
-                captured["message"] = str(error)
-            return await render("Home", {})
-
-        async with await client_for(app) as client:
-            await client.get("/", headers={"X-Inertia": "true"})
-
-        assert "takes the location first" in captured["message"]
-        assert 'inertia.redirect("/dashboard")' in captured["message"]
-
-    async def test_redirect_rejects_a_non_string_location(self, tmp_path):
-        app = SilloApp()
-        adapter = Inertia(app=app, root_view=write_root(tmp_path), base_dir=tmp_path)
-
-        captured: dict = {}
-
-        @app.get("/")
-        async def home(ctx):
-            try:
-                adapter.redirect(object())
-            except TypeError as error:
-                captured["message"] = str(error)
-            return await render("Home", {})
-
-        async with await client_for(app) as client:
-            await client.get("/", headers={"X-Inertia": "true"})
-
-        assert "takes the location first" in captured["message"]
-
-
 class TestThePageDecoratorInjection:
     async def test_a_handler_that_declares_a_context_receives_it(self, tmp_path):
         """The decorator passes the context only to a handler that asks for it,

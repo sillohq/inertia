@@ -8,8 +8,7 @@ depends on whether the client has booted yet, which is a property of the
 request rather than of your code.
 
 ```python
-from sillo import SilloApp
-from sillo.core.http import Request, Response
+from sillo import SilloApp, HttpContext
 from sillo_inertia import Inertia, vite_react
 
 app = SilloApp()
@@ -22,7 +21,7 @@ inertia = Inertia(
 
 
 @app.get("/")
-async def home(request: Request, response: Response):
+async def home(ctx: HttpContext):
     return await inertia.render("Home", {"name": "Sillo"})
 ```
 
@@ -87,10 +86,10 @@ need a different one — a background job, a test that calls a function directly
 — pass it by keyword:
 
 ```python
-await inertia.render("Home", props, request=request)
+await inertia.render("Home", props, ctx=ctx)
 ```
 
-Without a request from either source, `render` raises `OutsideRequestError`
+Without a context from either source, `render` raises `OutsideRequestError`
 and tells you which of those two cases you are in.
 
 ### Without the adapter in scope
@@ -105,7 +104,7 @@ from sillo_inertia import render
 
 
 @app.get("/")
-async def home(request: Request, response: Response):
+async def home(ctx: HttpContext):
     return await render("Home", {"name": "Sillo"})
 ```
 
@@ -114,15 +113,15 @@ async def home(request: Request, response: Response):
 When a handler does nothing but produce props, `@inertia.page` takes the rest:
 
 ```python
-@app.get("/users/{user_id}")
+@app.get("/users/{user_id:int}")
 @inertia.page("Users/Show")
-async def show(user_id):
+async def show(user_id: int):
     return {"user": await User.get(id=user_id)}
 ```
 
-The function declares only what it uses. Ask for `request` or `response` by
-name and you get them; leave them out and they are not passed. Path parameters
-and injected dependencies arrive as usual.
+The function declares only what it uses. Ask for `ctx` (or `context`) by name
+and you get it; leave it out and it is not passed. Path parameters and injected
+dependencies arrive as usual.
 
 Returning a response instead of a mapping sends that response untouched, so a
 handler can still redirect out of a page:
@@ -130,8 +129,8 @@ handler can still redirect out of a page:
 ```python
 @app.post("/users")
 @inertia.page("Users/Create")
-async def create(request: Request):
-    form = await request.json()
+async def create(ctx: HttpContext):
+    form = await ctx.json
     await User.create(**form)
     return inertia.redirect("/users")
 ```
@@ -145,21 +144,21 @@ Anything you would pass to `render` can be pinned on the decorator:
 ## Props
 
 A prop can be a value, a callable, or a coroutine function. Callables that want
-the request take one parameter; those that do not, take none.
+the context take one parameter; those that do not, take none.
 
 ```python
 {
-    "count": 5,                                   # a value
-    "total": lambda: Order.count(),               # called per request
-    "mine": lambda request: request.user.orders,  # given the request
-    "stats": fetch_stats,                         # async, awaited
+    "count": 5,                              # a value
+    "total": lambda: Order.count(),          # called per request
+    "mine": lambda ctx: ctx.user.orders,     # given the context
+    "stats": fetch_stats,                    # async, awaited
 }
 ```
 
 `props` itself can be a callable returning the whole mapping:
 
 ```python
-await inertia.render("Home", lambda request: {"path": request.url.path})
+await inertia.render("Home", lambda ctx: {"path": ctx.path})
 ```
 
 ### Lazy props
@@ -273,20 +272,23 @@ development, the hashed manifest entries and their CSS in production.
 
 ## Upgrading from 0.0.x
 
-`render` and `redirect` no longer take `request` and `response`:
+The adapter targets Sillo v1. Handlers take one argument, the `HttpContext`;
+there is no `Request`/`Response` pair.
 
 ```python
 # before
-return await inertia.render(request, response, "Home", {"name": "Sillo"})
+async def home(request: Request, response: Response):
+    return await inertia.render(request, response, "Home", {"name": "Sillo"})
+
 # after
-return await inertia.render("Home", {"name": "Sillo"})
+async def home(ctx: HttpContext):
+    return await inertia.render("Home", {"name": "Sillo"})
 ```
 
-The old call raises a `TypeError` naming the new form, so nothing fails
-silently. `Inertia.location()` is now synchronous — drop the `await`.
-
-Props callbacks taking a request still work unchanged; the parameter is now
-optional rather than required, so `lambda _: value` can become
+`render` and `redirect` take the component or location first and nothing else
+positionally; pass a non-current context as `ctx=`. `Inertia.location()` is
+synchronous — drop the `await`. Props callbacks that took a `request` take a
+`ctx` now, and the parameter is optional — `lambda _: value` becomes
 `lambda: value`.
 
 ## Project Links

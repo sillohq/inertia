@@ -683,35 +683,6 @@ class TestCurrentRequest:
         assert result.json()["props"] == {**SHARED_PROPS, "ok": True}
 
     @pytest.mark.asyncio
-    async def test_the_old_call_shape_says_what_to_write_instead(
-        self, tmp_path: Path
-    ) -> None:
-        """render(request, response, "Home") was the 0.0.x signature.
-
-        Passing a context first now lands on the props argument, where it would
-        otherwise fail somewhere deep in prop resolution with nothing pointing
-        back at the call.
-        """
-        app = SilloApp()
-        inertia = Inertia(app, root_view=write_root(tmp_path), version="abc")
-        errors: list = []
-
-        @app.get("/")
-        async def home(ctx: HttpContext):
-            try:
-                await inertia.render(ctx, None, "Home")  # type: ignore[arg-type]
-            except TypeError as exc:
-                errors.append(str(exc))
-            return await inertia.render("Home")
-
-        async with await get_client(app) as client:
-            await client.get("/", headers={"X-Inertia": "true"})
-
-        assert errors, "the old shape should not have been accepted"
-        assert 'inertia.render("Home"' in errors[0]
-        assert "ctx=ctx" in errors[0]
-
-    @pytest.mark.asyncio
     async def test_concurrent_requests_do_not_see_each_other(
         self, tmp_path: Path
     ) -> None:
