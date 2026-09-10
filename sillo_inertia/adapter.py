@@ -44,18 +44,6 @@ Props = (
 
 _CO_VARARGS = 0x04
 
-_WRONG_ARGUMENTS = """Inertia.{method}() takes {expected} first, not a context.
-
-    {example}
-
-The context comes from the middleware Inertia installs on the application, and
-the return value is a complete response — so neither one is passed in. If you
-need a context other than the current one (a test, a background job), pass it
-by keyword:
-
-    await inertia.render("Home", props, ctx=ctx)
-"""
-
 
 def _wants_context(callback: Callable[..., Any]) -> bool:
     """Report whether a props callback wants the context passed to it.
@@ -135,11 +123,18 @@ def dumps(payload: Any) -> str:
 def _endpoint_signature(func: Callable[..., Any]) -> inspect.Signature:
     """Build the signature the router should see for a decorated page handler.
 
-    The router reads the handler's signature to resolve dependencies, locate
-    the validated body and bind path parameters, then calls it with the
-    context first. A decorated function that does not declare a context would
-    break that, so the wrapper advertises one even when the function underneath
-    does not want it.
+    Sillo v1 hands every handler one leading argument — the ``HttpContext`` —
+    and resolves everything after it by name: path parameters, ``Depend(...)``
+    dependencies, and the ``Query``/``Header``/``Body`` markers. It reads that
+    shape off the handler's signature at registration.
+
+    The wrapper this decorator returns always takes ``(ctx, **kwargs)``, but a
+    page function underneath may declare no context at all
+    (``def home(): ...``) or name it ``context``. So the signature advertised
+    to the router is normalised: a single leading ``ctx: HttpContext``,
+    followed by every other parameter the function declared — defaults,
+    annotations and DI markers intact — so dependency resolution and path
+    binding see exactly what the author wrote.
     """
     signature = inspect.signature(func)
     rest = [
@@ -149,7 +144,13 @@ def _endpoint_signature(func: Callable[..., Any]) -> inspect.Signature:
         for parameter in signature.parameters.values()
         if parameter.name not in ("ctx", "context")
     ]
-    injected = [inspect.Parameter("ctx", inspect.Parameter.POSITIONAL_OR_KEYWORD)]
+    injected = [
+        inspect.Parameter(
+            "ctx",
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            annotation=HttpContext,
+        )
+    ]
     return signature.replace(parameters=injected + rest)
 
 
@@ -263,11 +264,7 @@ class Inertia:
         self,
         component: str,
         props: Props | None = None,
-        # Absorbs the extra positionals of the old render(request, response,
-        # component, props) so the guard below can name the new shape. Without
-        # it Python raises first, with an arity message that says nothing about
-        # what to write instead.
-        *_legacy: Any,
+        *,
         status_code: int = 200,
         headers: Mapping[str, str] | None = None,
         view_data: Mapping[str, Any] | None = None,
@@ -303,15 +300,6 @@ class Inertia:
             FileNotFoundError: If a first visit needs the root view and it is
                 not where the adapter was told to look.
         """
-        if _legacy or not isinstance(component, str):
-            raise TypeError(
-                _WRONG_ARGUMENTS.format(
-                    method="render",
-                    expected="the component name",
-                    example='return await inertia.render("Home", {"name": "Sillo"})',
-                )
-            )
-
         ctx = ctx if ctx is not None else current_context()
         resolved, instructions = await self._resolve_props(ctx, component, props or {})
 
@@ -346,8 +334,7 @@ class Inertia:
     def redirect(
         self,
         location: str,
-        # As on render(): absorbs redirect(request, response, location).
-        *_legacy: Any,
+        *,
         status_code: int | None = None,
         ctx: HttpContext | None = None,
     ) -> BaseResponse:
@@ -364,15 +351,6 @@ class Inertia:
         Returns:
             A redirect response.
         """
-        if _legacy or not isinstance(location, str):
-            raise TypeError(
-                _WRONG_ARGUMENTS.format(
-                    method="redirect",
-                    expected="the location",
-                    example='return inertia.redirect("/dashboard")',
-                )
-            )
-
         ctx = ctx if ctx is not None else current_context()
         code = status_code or (303 if ctx.method.upper() != "GET" else 302)
         return RedirectResponse(url=location, status_code=code)
@@ -417,7 +395,7 @@ class Inertia:
 
         The handler declares only what it uses, and returns a plain mapping::
 
-            @app.get("/users/{user_id}")
+            @app.get("/users/{user_id:int}")
             @inertia.page("Users/Show")
             async def show(ctx, user_id: int):
                 return {"user": await User.get(id=user_id)}
@@ -768,12 +746,14 @@ def _narrow(value: Any, branches: list[list[str]]) -> Any:
     output: dict[str, Any] = {}
     grouped: dict[str, list[list[str]]] = {}
     for branch in branches:
-        head, rest = branch[0], branch[1:]
+        head, tail = branch[0], branch[1:]
         grouped.setdefault(head, [])
-        if rest:
-            grouped[head].append(rest)
-    for head, rest in grouped.items():
+        if tail:
+            grouped[head].append(tail)
+    for head, sub_branches in grouped.items():
         if head not in value:
             continue
-        output[head] = _narrow(value[head], rest) if rest else value[head]
+        output[head] = (
+            _narrow(value[head], sub_branches) if sub_branches else value[head]
+        )
     return output
