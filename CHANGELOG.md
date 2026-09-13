@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0a1] - 2026-09-13
+
+First alpha, released alongside `sillo-framework` 1.0.0a1. Install with
+`pip install --pre sillo-inertia==1.0.0a1`.
+
+An alpha: this is what 1.0 is expected to look like, but the API is not frozen
+yet and may still change before `1.0.0`.
+
+### Fixed
+
+- **A test assumed `debug` defaulted to on.** Sillo 1.0 flipped
+  `SilloApp(debug=...)` to default `False`, so a 500 now renders the bare
+  "Internal Server Error" string rather than a page naming the exception. The
+  missing-root-view test asserts on that message, so it builds its app with
+  `debug=True` explicitly. The behaviour under test never changed.
+
 ## [0.1.0.dev1] - 2026-09-07
 
 Development pre-release for testing against `sillo-framework==0.3.2.dev1`.

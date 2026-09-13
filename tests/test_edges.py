@@ -67,7 +67,10 @@ class TestTheRootView:
         wrong path is invisible until a browser navigates directly to a page
         -- typically after every Inertia visit has worked fine.
         """
-        app = SilloApp()
+        # debug=True is load-bearing here. Sillo 1.0 defaults it to False, and
+        # a non-debug 500 is the bare "Internal Server Error" string -- which
+        # is right for production and useless for asserting on the message.
+        app = SilloApp(debug=True)
         Inertia(app=app, root_view=tmp_path / "nope" / "app.html", base_dir=tmp_path)
 
         @app.get("/")

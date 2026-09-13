@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sillo-inertia"
-version = "0.1.0.dev1"
+version = "1.0.0a1"
 description = "Inertia.js adapter for Sillo with React/Vue/Vite support."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -113,7 +113,7 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.1.0.dev1"
+version = "1.0.0a1"
 version_files = [
     "pyproject.toml:version"
 ]
