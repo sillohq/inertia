@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sillo-inertia"
-version = "1.0.0a1"
+version = "1.0.0a2"
 description = "Inertia.js adapter for Sillo with React/Vue/Vite support."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -23,7 +23,7 @@ dependencies = [
     # and this adapter is written against `HttpContext` and the free response
     # builders in `sillo.responses` — on anything older it fails at import,
     # not at request time.
-    "sillo-framework[record]>=0.3.2.dev1",
+    "sillo-framework[record]>=1.0.0a1",
 ]
 
 [project.urls]
@@ -113,7 +113,7 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "1.0.0a1"
+version = "1.0.0a2"
 version_files = [
     "pyproject.toml:version"
 ]
