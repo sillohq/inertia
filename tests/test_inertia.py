@@ -1095,7 +1095,7 @@ class TestPageDecoratorAndTheRouter:
 
         @app.get("/team")
         @inertia.page("Team")
-        async def team(team_name=Depend(current_team)):
+        async def team(team_name=Depend(current_team, get_context=True)):
             return {"team": team_name}
 
         async with await get_client(app) as client:

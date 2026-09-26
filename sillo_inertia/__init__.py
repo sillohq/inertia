@@ -45,7 +45,7 @@ if TYPE_CHECKING:
     from sillo.core.http import HttpContext
     from sillo.responses import BaseResponse
 
-__version__ = "1.0.0a2"
+__version__ = "1.0.0"
 
 
 async def render(component: str, props: Any = None, **options: Any) -> BaseResponse:
